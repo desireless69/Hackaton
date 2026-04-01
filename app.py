@@ -137,7 +137,19 @@ def main() -> None:
         "compute mission metrics, and inspect the 3D ENU trajectory."
     )
 
-    bundled_logs = sorted((PROJECT_ROOT.parent / "bin").glob("*.BIN"))
+    bundled_logs: list[Path] = []
+    for candidate_dir in (
+        PROJECT_ROOT / "bin",
+        PROJECT_ROOT / "_task" / "test_task_challenge",
+        PROJECT_ROOT / "backend" / ".uploads",
+    ):
+        if candidate_dir.exists():
+            bundled_logs.extend(sorted(candidate_dir.glob("*.BIN")))
+
+    deduped_logs: dict[str, Path] = {}
+    for path in bundled_logs:
+        deduped_logs.setdefault(path.name, path)
+    bundled_logs = list(deduped_logs.values())
 
     with st.sidebar:
         st.header("Input")
