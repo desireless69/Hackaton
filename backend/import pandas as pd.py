@@ -4,6 +4,11 @@ import math
 import plotly.express as px
 from pymavlink import mavutil
 import plotly.io as pio
+from pathlib import Path
+
+# --- 0. ПІДГОТОВКА ВІДНОСНОГО ШЛЯХУ ---
+
+current_dir = Path(".")
 
 # --- 1. ПАРСИНГ ТЕЛЕМЕТРІЇ (Data Parsing) ---
 def parse_bin_log(file_path):
@@ -166,7 +171,7 @@ def plot_trajectory(df):
 
 # --- ГОЛОВНИЙ БЛОК ---
 if __name__ == "__main__":
-    log_file = "E:\\Visual Studio Code\\DiscreteMath\\Lab2\\00000001.BIN"  # Заміни на шлях до свого файлу
+    log_file = current_dir / "bin" / "00000001.BIN" # Заміни на шлях до свого файлу
     
     print("Парсинг логу...")
     flight_data = parse_bin_log(log_file)
