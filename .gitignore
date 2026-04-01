@@ -2,3 +2,4 @@ backend/.uploads/
 __pycache__/
 .pytest_cache/
 _task/
+_restore/

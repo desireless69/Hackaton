@@ -2,7 +2,7 @@ services:
   telemetry-dashboard:
     build:
       context: .
-      dockerfile: backend/Dockerfile
+      dockerfile: Dockerfile
     ports:
       - "8501:8501"
     environment:

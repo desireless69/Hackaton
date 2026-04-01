@@ -13,7 +13,7 @@ from telemetry_dashboard.parser import parse_bin_log
 
 
 def main() -> None:
-    logs = sorted((PROJECT_ROOT.parent / "bin").glob("*.BIN"))
+    logs = sorted((PROJECT_ROOT / "bin").glob("*.BIN"))
     for log_path in logs:
         parsed = parse_bin_log(log_path)
         report = analyze_flight(parsed)

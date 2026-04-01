@@ -1,12 +1,14 @@
 FROM python:3.12-slim
 
-WORKDIR /app/backend
+WORKDIR /app
 
-COPY backend/requirements.txt ./requirements.txt
+COPY requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY backend ./
-COPY bin /app/bin
+COPY app.py ./app.py
+COPY run_analysis.py ./run_analysis.py
+COPY src ./src
+COPY bin ./bin
 
 EXPOSE 8501
 
