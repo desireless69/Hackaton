@@ -31,7 +31,7 @@ load_local_env(PROJECT_ROOT / ".env")
 from telemetry_dashboard.analysis import analyze_flight
 from telemetry_dashboard.llm_summary import build_insight
 from telemetry_dashboard.parser import parse_bin_log
-from telemetry_dashboard.visualization import build_trajectory_figure
+from telemetry_dashboard.visualization import build_projection_figures, build_trajectory_figure
 
 st.set_page_config(
     page_title="Telemetry Flight Analyzer",
@@ -182,11 +182,15 @@ def render_report(log_path: Path) -> None:
     st.caption(
         "The dashboard still integrates IMU accelerations with the trapezoidal rule, "
         "but the headline speed metrics are taken from GPS because pure IMU integration "
-        "accumulates drift. Both views are shown below for transparent comparison."
+        "accumulates drift."
     )
 
     chart_col, info_col = st.columns([2, 1])
     with chart_col:
+        st.markdown("### 3D ENU Trajectory")
+        st.caption(
+            "Interactive 3D trajectory in local ENU coordinates with three explicit axes: X = North, Y = East, Z = Height. The path is dynamically colored by time progression."
+        )
         st.plotly_chart(build_trajectory_figure(report.enriched_samples), use_container_width=True)
     with info_col:
         st.markdown("### Sensor metadata")
@@ -233,6 +237,15 @@ def render_report(log_path: Path) -> None:
             use_container_width=True,
             hide_index=True,
         )
+
+    st.markdown("### Additional 2D Projections")
+    st.caption("These 2D charts are supplementary views; the main trajectory panel above remains the primary 3D ENU visualization.")
+    top_view, altitude_profile = build_projection_figures(report.enriched_samples)
+    projection_left, projection_right = st.columns(2)
+    with projection_left:
+        st.plotly_chart(top_view, use_container_width=True)
+    with projection_right:
+        st.plotly_chart(altitude_profile, use_container_width=True)
 
     ai_text = build_insight(report)
     render_ai_panel(ai_text)
