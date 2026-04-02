@@ -34,9 +34,6 @@ streamlit run app.py
 
 Open `http://localhost:8501`.
 
-python run_analysis.py
-```
-
 ## Console validation
 
 ```bash
