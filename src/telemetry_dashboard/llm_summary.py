@@ -2,67 +2,132 @@ from __future__ import annotations
 
 import os
 from textwrap import dedent
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 from telemetry_dashboard.models import FlightReport
-
-try:
-    from openai import OpenAI
-except ImportError:  # pragma: no cover
-    OpenAI = None
 
 
 def _rule_based_summary(report: FlightReport) -> str:
     metrics = report.metrics
-    risk_flags: list[str] = []
-
-    if metrics.max_vertical_speed_m_s > 20:
-        risk_flags.append("the flight had aggressive vertical manoeuvres")
-    if metrics.max_horizontal_speed_m_s > 30:
-        risk_flags.append("horizontal speed reached a high envelope")
-    if metrics.max_acceleration_m_s2 > 15:
-        risk_flags.append("acceleration peaks suggest intense dynamic loading")
-
-    verdict = "; ".join(risk_flags) if risk_flags else "the flight stayed within a moderate dynamic envelope"
-    return (
-        f"Duration {metrics.total_duration_s:.2f} s, distance {metrics.total_distance_m:.2f} m, "
-        f"max horizontal speed {metrics.max_horizontal_speed_m_s:.2f} m/s, "
-        f"max vertical speed {metrics.max_vertical_speed_m_s:.2f} m/s, "
-        f"and altitude gain {metrics.max_altitude_gain_m:.2f} m. "
-        f"Based on deterministic rules, {verdict}. "
-        "Provide an API key to replace this fallback with an actual LLM-generated narrative."
+    drift_note = (
+        "IMU and GPS speed estimates are reasonably close."
+        if abs(metrics.max_horizontal_speed_m_s - metrics.max_horizontal_speed_imu_m_s) < 8
+        else "The IMU and GPS speed peaks differ noticeably, which suggests IMU integration drift."
     )
+    risk_note = "No critical anomalies stand out."
+    if metrics.max_vertical_speed_m_s > 80:
+        risk_note = "The flight shows very aggressive vertical motion and deserves a safety review."
+    elif metrics.max_horizontal_speed_m_s > 45:
+        risk_note = "The flight reached a high horizontal speed envelope."
 
-
-def build_insight(report: FlightReport) -> str:
-    api_key = os.getenv("OPENAI_API_KEY")
-    model = os.getenv("OPENAI_MODEL", "gpt-4.1-mini")
-    base_url = os.getenv("OPENAI_BASE_URL")
-
-    if not api_key or OpenAI is None:
-        return _rule_based_summary(report)
-
-    client_kwargs = {"api_key": api_key}
-    if base_url:
-        client_kwargs["base_url"] = base_url
-
-    client = OpenAI(**client_kwargs)
-    metrics = report.metrics
-    prompt = dedent(
+    return dedent(
         f"""
-        Summarize this UAV flight in 4-5 sentences and highlight anomalies or risky manoeuvres.
-        Duration: {metrics.total_duration_s:.2f} s
-        Distance: {metrics.total_distance_m:.2f} m
-        Max horizontal speed from GPS: {metrics.max_horizontal_speed_m_s:.2f} m/s
-        Max vertical speed from GPS: {metrics.max_vertical_speed_m_s:.2f} m/s
-        Max horizontal speed from IMU integration: {metrics.max_horizontal_speed_imu_m_s:.2f} m/s
-        Max vertical speed from IMU integration: {metrics.max_vertical_speed_imu_m_s:.2f} m/s
-        Max acceleration: {metrics.max_acceleration_m_s2:.2f} m/s^2
-        Max altitude gain: {metrics.max_altitude_gain_m:.2f} m
+        ### Overall assessment
+        The UAV completed a dynamic flight that covered {metrics.total_distance_m:.2f} m in {metrics.total_duration_s:.2f} s.
+
+        ### Key metrics
+        Peak horizontal speed reached {metrics.max_horizontal_speed_m_s:.2f} m/s, peak vertical speed reached {metrics.max_vertical_speed_m_s:.2f} m/s, and altitude gain was {metrics.max_altitude_gain_m:.2f} m.
+
+        ### Anomalies or risks
+        {risk_note} Maximum measured acceleration was {metrics.max_acceleration_m_s2:.2f} m/s^2.
+
+        ### Sensor confidence
+        {drift_note}
         """
     ).strip()
 
+
+def _prompt_from_report(report: FlightReport) -> str:
+    metrics = report.metrics
+    return dedent(
+        f"""
+        You are analyzing a UAV flight log.
+
+        Return Markdown only using exactly these section headers:
+        ### Overall assessment
+        ### Key metrics
+        ### Anomalies or risks
+        ### Sensor confidence
+
+        Requirements:
+        - Write 1-2 short sentences in each section.
+        - Mention the actual numeric values.
+        - Explicitly mention sudden altitude loss, high vertical speed, overspeed, or high acceleration when they appear.
+        - If IMU and GPS speeds differ strongly, explicitly say this suggests IMU drift.
+        - Do not add any extra headers or intro text.
+        - Do not use code fences.
+
+        Flight data:
+        - Duration: {metrics.total_duration_s:.2f} s
+        - Distance: {metrics.total_distance_m:.2f} m
+        - Max horizontal speed from GPS: {metrics.max_horizontal_speed_m_s:.2f} m/s
+        - Max vertical speed from GPS: {metrics.max_vertical_speed_m_s:.2f} m/s
+        - Max horizontal speed from IMU integration: {metrics.max_horizontal_speed_imu_m_s:.2f} m/s
+        - Max vertical speed from IMU integration: {metrics.max_vertical_speed_imu_m_s:.2f} m/s
+        - Max acceleration: {metrics.max_acceleration_m_s2:.2f} m/s^2
+        - Max altitude gain: {metrics.max_altitude_gain_m:.2f} m
+        """
+    ).strip()
+
+
+def _gemini_summary(report: FlightReport, api_key: str, model: str) -> str:
+    prompt = _prompt_from_report(report)
+    endpoint = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{model}:generateContent?key={api_key}"
+    )
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {
+                        "text": prompt,
+                    }
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.2,
+            "topP": 0.8,
+            "maxOutputTokens": 700,
+        },
+    }
+    request = Request(
+        endpoint,
+        data=json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
     try:
-        response = client.responses.create(model=model, input=prompt)
-        return response.output_text.strip()
-    except Exception as exc:  # pragma: no cover
-        return f"{_rule_based_summary(report)} LLM request failed: {exc}."
+        with urlopen(request, timeout=30) as response:
+            body = json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:  # pragma: no cover
+        details = exc.read().decode("utf-8", errors="ignore")
+        raise RuntimeError(f"Gemini HTTP {exc.code}: {details}") from exc
+    except URLError as exc:  # pragma: no cover
+        raise RuntimeError(f"Gemini network error: {exc.reason}") from exc
+
+    candidates = body.get("candidates", [])
+    if not candidates:
+        raise RuntimeError(f"Gemini returned no candidates: {body}")
+
+    parts = candidates[0].get("content", {}).get("parts", [])
+    text = "".join(part.get("text", "") for part in parts).strip()
+    if not text:
+        raise RuntimeError(f"Gemini returned an empty response: {body}")
+    return text
+
+
+def build_insight(report: FlightReport) -> str:
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    gemini_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
+
+    if gemini_api_key:
+        try:
+            return _gemini_summary(report, gemini_api_key, gemini_model)
+        except Exception:  # pragma: no cover
+            return _rule_based_summary(report)
+
+    return _rule_based_summary(report)

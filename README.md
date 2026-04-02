@@ -34,6 +34,19 @@ streamlit run app.py
 
 Open `http://localhost:8501`.
 
+## Gemini LLM setup
+
+Create a local `.env` file with:
+
+```bash
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-1.5-flash
+```
+
+The app loads `.env` automatically and uses Gemini for the "Flight insight" block when the key is present.
+
+No OpenAI dependency is required.
+
 ## Console validation
 
 ```bash
