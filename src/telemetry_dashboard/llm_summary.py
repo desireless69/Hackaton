@@ -1,11 +1,20 @@
 from __future__ import annotations
 
+import json
 import os
+import re
 from textwrap import dedent
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 from telemetry_dashboard.models import FlightReport
+
+SECTION_HEADERS = (
+    "Overall assessment",
+    "Key metrics",
+    "Anomalies or risks",
+    "Sensor confidence",
+)
 
 
 def _rule_based_summary(report: FlightReport) -> str:
@@ -51,12 +60,14 @@ def _prompt_from_report(report: FlightReport) -> str:
         ### Sensor confidence
 
         Requirements:
+        - Write exactly 4 sections and keep the section titles exactly as provided.
         - Write 1-2 short sentences in each section.
         - Mention the actual numeric values.
         - Explicitly mention sudden altitude loss, high vertical speed, overspeed, or high acceleration when they appear.
         - If IMU and GPS speeds differ strongly, explicitly say this suggests IMU drift.
         - Do not add any extra headers or intro text.
         - Do not use code fences.
+        - Do not collapse the answer into one paragraph.
 
         Flight data:
         - Duration: {metrics.total_duration_s:.2f} s
@@ -69,6 +80,37 @@ def _prompt_from_report(report: FlightReport) -> str:
         - Max altitude gain: {metrics.max_altitude_gain_m:.2f} m
         """
     ).strip()
+
+
+def _split_sections(text: str) -> dict[str, str]:
+    matches = list(re.finditer(r"^###\s+(.+?)\s*$", text, flags=re.MULTILINE))
+    if not matches:
+        return {}
+
+    sections: dict[str, str] = {}
+    for index, match in enumerate(matches):
+        title = match.group(1).strip()
+        start = match.end()
+        end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        body = text[start:end].strip()
+        sections[title] = body
+    return sections
+
+
+def _normalize_summary(text: str, report: FlightReport) -> str:
+    fallback_sections = _split_sections(_rule_based_summary(report))
+    model_sections = _split_sections(text)
+
+    if not model_sections:
+        model_sections = {"Overall assessment": text.strip()}
+
+    normalized: list[str] = []
+    for title in SECTION_HEADERS:
+        body = model_sections.get(title) or fallback_sections.get(title, "")
+        if not body:
+            continue
+        normalized.append(f"### {title}\n{body.strip()}")
+    return "\n\n".join(normalized).strip()
 
 
 def _gemini_summary(report: FlightReport, api_key: str, model: str) -> str:
@@ -117,7 +159,7 @@ def _gemini_summary(report: FlightReport, api_key: str, model: str) -> str:
     text = "".join(part.get("text", "") for part in parts).strip()
     if not text:
         raise RuntimeError(f"Gemini returned an empty response: {body}")
-    return text
+    return _normalize_summary(text, report)
 
 
 def build_insight(report: FlightReport) -> str:

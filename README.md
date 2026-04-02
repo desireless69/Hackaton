@@ -8,14 +8,14 @@ This project is an ArduPilot telemetry analyzer that:
 - estimates sensor sampling frequencies and tracks units;
 - computes total duration, distance via the Haversine formula, altitude gain, GPS peak speeds, and IMU-derived speeds via trapezoidal integration;
 - converts WGS-84 coordinates into a local ENU frame;
-- shows the flight through a Streamlit dashboard with a 3D view and 2D fallback projections;
-- can optionally generate a short LLM-based flight insight.
+- serves a FastAPI web app with one main 3D ENU trajectory view plus supplementary 2D projections;
+- generates an AI flight conclusion through Gemini when `GEMINI_API_KEY` is available.
 
 ## Structure
 
 ```text
 .
-|-- app.py
+|-- main.py
 |-- run_analysis.py
 |-- requirements.txt
 |-- Dockerfile
@@ -29,14 +29,26 @@ This project is an ArduPilot telemetry analyzer that:
 
 ```bash
 pip install -r requirements.txt
-streamlit run app.py
+uvicorn main:app --reload
 ```
 
-Open `http://localhost:8501`.
+Open `http://localhost:8000`.
+
+## Gemini setup
+
+Create a local `.env` file:
+
+```bash
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-1.5-flash
+```
 
 ## Console validation
 
 ```bash
+python run_analysis.py
+```
+
 ## Docker run
 
 ```bash
@@ -48,4 +60,4 @@ docker compose up --build
 - Distance is computed from valid GPS fixes with the Haversine formula.
 - IMU accelerations are rotated into ENU using ATT roll, pitch, and yaw.
 - Speed from IMU is recovered with trapezoidal integration, but GPS peak speed is kept as the headline metric because pure IMU integration drifts.
-- The dashboard shows both 3D and 2D trajectory views to stay readable even when WebGL rendering is limited.
+- The main 3D plot uses `X = North`, `Y = East`, `Z = Height` and dynamic coloring by time.
