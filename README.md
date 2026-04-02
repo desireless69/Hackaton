@@ -34,12 +34,12 @@ streamlit run app.py
 
 Open `http://localhost:8501`.
 
-## Console validation
-
-```bash
 python run_analysis.py
 ```
 
+## Console validation
+
+```bash
 ## Docker run
 
 ```bash
