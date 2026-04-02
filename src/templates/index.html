@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UAV Telemetry Analyzer</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f1f5f9; color: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); text-align: center; max-width: 500px; width: 100%; }
+        .upload-area { border: 2px dashed #cbd5e1; border-radius: 8px; padding: 40px 20px; margin: 20px 0; background: #f8fafc; }
+        input[type="file"] { margin-bottom: 20px; }
+        button { background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #2563eb; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>Upload Flight Log</h1>
+        <p>Select a MAVLink <strong>.BIN</strong> file to generate an interactive analysis report.</p>
+
+        <form action="/analyze" method="post" enctype="multipart/form-data">
+            <div class="upload-area">
+                <input type="file" name="file" accept=".bin,.log" required>
+            </div>
+            <button type="submit" onclick="this.innerText='Processing...'">Analyze Flight</button>
+        </form>
+    </div>
+</body>
+</html>

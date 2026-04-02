@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flight Report: {{ filename }}</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; background: #f8fafc; color: #0f172a; margin: 0; padding: 40px 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #e2e8f0; padding-bottom: 20px; }
+        .back-btn { background: #e2e8f0; color: #0f172a; text-decoration: none; padding: 8px 16px; border-radius: 6px; font-weight: 500; }
+        .back-btn:hover { background: #cbd5e1; }
+
+        /* Summary Card */
+        .summary-card { background: #eff6ff; border-left: 4px solid #3b82f6; padding: 20px; border-radius: 0 8px 8px 0; margin-bottom: 30px; font-size: 1.1em; line-height: 1.6; }
+
+        /* Metrics Grid */
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 40px; }
+        .metric-box { background: #f1f5f9; padding: 20px; border-radius: 8px; text-align: center; border: 1px solid #e2e8f0; }
+        .metric-title { font-size: 0.9em; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 8px; }
+        .metric-value { font-size: 1.5em; font-weight: 700; color: #0f172a; }
+
+        /* Plotly Container */
+        .plot-container { width: 100%; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Flight Report: {{ filename }}</h1>
+            <a href="/" class="back-btn">&larr; Upload Another</a>
+        </div>
+
+        <div class="summary-card">
+            <strong>Flight Insight:</strong><br>
+            {{ summary }}
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-box">
+                <div class="metric-title">Total Duration</div>
+                <div class="metric-value">{{ "%.1f"|format(metrics.total_duration_s) }} s</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-title">Total Distance</div>
+                <div class="metric-value">{{ "%.1f"|format(metrics.total_distance_m) }} m</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-title">Max Alt Gain</div>
+                <div class="metric-value">{{ "%.1f"|format(metrics.max_altitude_gain_m) }} m</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-title">Max Speed (Horiz)</div>
+                <div class="metric-value">{{ "%.1f"|format(metrics.max_horizontal_speed_m_s) }} m/s</div>
+            </div>
+            <div class="metric-box">
+                <div class="metric-title">Max Acceleration</div>
+                <div class="metric-value">{{ "%.1f"|format(metrics.max_acceleration_m_s2) }} m/s²</div>
+            </div>
+        </div>
+
+        <h2>Interactive Trajectory</h2>
+        <div class="plot-container">
+            {{ plot_html | safe }}
+        </div>
+    </div>
+</body>
+</html>
