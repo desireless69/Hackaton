@@ -4,17 +4,60 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>UAV Telemetry Analyzer</title>
+    <script>
+        document.documentElement.setAttribute("data-theme", localStorage.getItem("telemetry-theme") || "light");
+    </script>
     <style>
-        body { font-family: system-ui, -apple-system, sans-serif; background: #f1f5f9; color: #0f172a; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .card { background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); text-align: center; max-width: 500px; width: 100%; }
-        .upload-area { border: 2px dashed #cbd5e1; border-radius: 8px; padding: 40px 20px; margin: 20px 0; background: #f8fafc; }
-        input[type="file"] { margin-bottom: 20px; }
-        button { background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
-        button:hover { background: #2563eb; }
+        :root {
+            color-scheme: light;
+            --bg: linear-gradient(180deg, #e0f2fe 0%, #f8fafc 100%);
+            --surface: rgba(255, 255, 255, 0.96);
+            --surface-2: #f8fbff;
+            --text: #0f172a;
+            --muted: #334155;
+            --border: #93c5fd;
+            --shadow: 0 20px 60px -30px rgb(15 23 42 / 0.45);
+            --accent: #0f766e;
+            --accent-hover: #115e59;
+            --pill-bg: #dbeafe;
+            --pill-text: #1d4ed8;
+        }
+        :root[data-theme="dark"] {
+            color-scheme: dark;
+            --bg: radial-gradient(circle at top, #0f2a43 0%, #08111d 45%, #030712 100%);
+            --surface: rgba(8, 17, 29, 0.92);
+            --surface-2: rgba(15, 23, 42, 0.9);
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --border: #155e75;
+            --shadow: 0 24px 80px -40px rgb(2 6 23 / 0.9);
+            --accent: #14b8a6;
+            --accent-hover: #0d9488;
+            --pill-bg: rgba(22, 78, 99, 0.45);
+            --pill-text: #67e8f9;
+        }
+        * { box-sizing: border-box; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg); color: var(--text); display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; padding: 24px; transition: background 0.25s ease, color 0.25s ease; }
+        .shell { width: 100%; max-width: 720px; }
+        .toolbar { display: flex; justify-content: flex-end; margin-bottom: 14px; }
+        .theme-toggle { width: 44px; height: 44px; border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 999px; font: inherit; font-size: 20px; cursor: pointer; box-shadow: var(--shadow); display: inline-grid; place-items: center; }
+        .card { background: var(--surface); padding: 40px; border-radius: 18px; box-shadow: var(--shadow); text-align: center; width: 100%; border: 1px solid rgba(148, 163, 184, 0.18); }
+        .eyebrow { display: inline-block; margin-bottom: 12px; padding: 6px 10px; background: var(--pill-bg); color: var(--pill-text); border-radius: 999px; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; }
+        h1 { margin: 0 0 10px 0; }
+        p { color: var(--muted); line-height: 1.6; }
+        .upload-area { border: 2px dashed var(--border); border-radius: 14px; padding: 36px 20px; margin: 24px 0; background: var(--surface-2); }
+        input[type="file"] { margin-bottom: 20px; color: var(--muted); width: 100%; }
+        button[type="submit"] { background: var(--accent); color: white; border: none; padding: 12px 24px; border-radius: 10px; font-size: 16px; font-weight: 600; cursor: pointer; transition: background 0.2s; }
+        button[type="submit"]:hover { background: var(--accent-hover); }
     </style>
 </head>
 <body>
-    <div class="card">
+    <div class="shell">
+        <div class="toolbar">
+            <button type="button" class="theme-toggle" id="theme-toggle" aria-label="Toggle theme" title="Toggle theme">☾</button>
+        </div>
+        <div class="card">
+        <div class="eyebrow">FASTAPI ANALYZER</div>
         <h1>Upload Flight Log</h1>
         <p>Select a MAVLink <strong>.BIN</strong> file to generate an interactive analysis report.</p>
 
@@ -24,6 +67,27 @@
             </div>
             <button type="submit" onclick="this.innerText='Processing...'">Analyze Flight</button>
         </form>
+        </div>
     </div>
+    <script>
+        const storageKey = "telemetry-theme";
+        const root = document.documentElement;
+        const toggle = document.getElementById("theme-toggle");
+
+        function applyTheme(theme) {
+            root.setAttribute("data-theme", theme);
+            toggle.textContent = theme === "dark" ? "☀" : "☾";
+            toggle.title = theme === "dark" ? "Switch to light theme" : "Switch to dark theme";
+        }
+
+        const storedTheme = localStorage.getItem(storageKey) || "light";
+        applyTheme(storedTheme);
+
+        toggle.addEventListener("click", () => {
+            const nextTheme = root.getAttribute("data-theme") === "dark" ? "light" : "dark";
+            localStorage.setItem(storageKey, nextTheme);
+            applyTheme(nextTheme);
+        });
+    </script>
 </body>
 </html>

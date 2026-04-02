@@ -39,20 +39,25 @@ def parse_bin_log(log_path: str | Path) -> ParsedFlight:
     imu_records: list[dict] = []
     att_records: list[dict] = []
 
-    while True:
-        message = mav_log.recv_match(type=["GPS", "IMU", "ATT"], blocking=False)
-        if message is None:
-            break
+    try:
+        while True:
+            message = mav_log.recv_match(type=["GPS", "IMU", "ATT"], blocking=False)
+            if message is None:
+                break
 
-        payload = message.to_dict()
-        message_type = message.get_type()
+            payload = message.to_dict()
+            message_type = message.get_type()
 
-        if message_type == "GPS":
-            gps_records.append({field: payload[field] for field in GPS_FIELDS})
-        elif message_type == "IMU":
-            imu_records.append({field: payload[field] for field in IMU_FIELDS})
-        elif message_type == "ATT":
-            att_records.append({field: payload[field] for field in ATT_FIELDS})
+            if message_type == "GPS":
+                gps_records.append({field: payload[field] for field in GPS_FIELDS})
+            elif message_type == "IMU":
+                imu_records.append({field: payload[field] for field in IMU_FIELDS})
+            elif message_type == "ATT":
+                att_records.append({field: payload[field] for field in ATT_FIELDS})
+    finally:
+        close = getattr(mav_log, "close", None)
+        if callable(close):
+            close()
 
     gps_frame = _records_to_frame(gps_records, GPS_FIELDS)
     imu_frame = _records_to_frame(imu_records, IMU_FIELDS)

@@ -1,4 +1,5 @@
 backend/.uploads/
+.uploads/
 __pycache__/
 .pytest_cache/
 _task/
