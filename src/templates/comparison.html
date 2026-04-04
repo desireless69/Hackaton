@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Flight Comparison{% endblock %}
+{% block body_page %}comparison{% endblock %}
+
+{% block body %}
+<div class="page-shell">
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+
+    <main class="app-shell">
+        <header class="topbar">
+            <div>
+                <p class="eyebrow">Comparison Report</p>
+                <h1 class="hero-title">{{ label_a }} vs {{ label_b }}</h1>
+            </div>
+            <div class="topbar-actions">
+                <a href="/" class="secondary-button">Back Home</a>
+                <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle theme" title="Toggle theme"></button>
+            </div>
+        </header>
+
+        <section class="panel chart-panel">
+            <div class="panel-heading">
+                <div>
+                    <p class="panel-kicker">Map View</p>
+                    <h2>Route overlay</h2>
+                </div>
+            </div>
+            <div class="plot-frame">
+                {{ comparison_map_html | safe }}
+            </div>
+        </section>
+
+        <section class="comparison-cards">
+            <article class="panel comparison-card">
+                <p class="panel-kicker">{{ label_a }}</p>
+                <h2>{{ context_a.filename }}</h2>
+                <p class="panel-copy">GPS {{ context_a.gps_frequency_hz }} Hz, IMU {{ context_a.imu_frequency_hz }} Hz</p>
+            </article>
+            <article class="panel comparison-card">
+                <p class="panel-kicker">{{ label_b }}</p>
+                <h2>{{ context_b.filename }}</h2>
+                <p class="panel-copy">GPS {{ context_b.gps_frequency_hz }} Hz, IMU {{ context_b.imu_frequency_hz }} Hz</p>
+            </article>
+        </section>
+
+        <section class="panel chart-panel">
+            <div class="panel-heading">
+                <div>
+                    <p class="panel-kicker">Metrics</p>
+                    <h2>Side-by-side comparison</h2>
+                </div>
+            </div>
+            <div class="comparison-table-wrap">
+                <table class="comparison-table">
+                    <thead>
+                        <tr>
+                            <th>Metric</th>
+                            <th>{{ label_a }}</th>
+                            <th>{{ label_b }}</th>
+                            <th>Delta</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in comparison_rows %}
+                        <tr>
+                            <td>{{ row.label }}</td>
+                            <td>{{ "%.2f"|format(row.first) }}</td>
+                            <td>{{ "%.2f"|format(row.second) }}</td>
+                            <td class="delta-{{ row.trend }}">{{ row.delta_text }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="comparison-cards">
+            <article class="panel panel-summary">
+                <div class="panel-heading">
+                    <div>
+                        <p class="panel-kicker">{{ label_a }}</p>
+                        <h2>AI summary</h2>
+                    </div>
+                </div>
+                <div class="summary-stack">
+                    {{ context_a.summary_html | safe }}
+                </div>
+            </article>
+            <article class="panel panel-summary">
+                <div class="panel-heading">
+                    <div>
+                        <p class="panel-kicker">{{ label_b }}</p>
+                        <h2>AI summary</h2>
+                    </div>
+                </div>
+                <div class="summary-stack">
+                    {{ context_b.summary_html | safe }}
+                </div>
+            </article>
+        </section>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='/js/plot-theme.js') }}"></script>
+{% endblock %}

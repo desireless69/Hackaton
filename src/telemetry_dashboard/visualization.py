@@ -198,3 +198,130 @@ def build_projection_figures(samples: pd.DataFrame) -> tuple[go.Figure, go.Figur
     )
 
     return top_view, altitude_profile
+
+
+def _map_zoom(samples: pd.DataFrame) -> float:
+    lat_span = float(samples["Lat"].max() - samples["Lat"].min())
+    lon_span = float(samples["Lng"].max() - samples["Lng"].min())
+    span = max(lat_span, lon_span)
+
+    if span < 0.002:
+        return 15.5
+    if span < 0.005:
+        return 14.5
+    if span < 0.02:
+        return 13.0
+    if span < 0.08:
+        return 11.5
+    return 10.0
+
+
+def build_map_figure(samples: pd.DataFrame, title: str = "Flight path map") -> go.Figure:
+    figure_samples = _sample_for_plotting(samples)
+
+    figure = go.Figure()
+    figure.add_trace(
+        go.Scattermap(
+            lat=figure_samples["Lat"],
+            lon=figure_samples["Lng"],
+            mode="lines",
+            line={"color": "#14b8a6", "width": 4},
+            name="Track",
+            hovertemplate="Lat: %{lat:.6f}<br>Lng: %{lon:.6f}<extra></extra>",
+        )
+    )
+    figure.add_trace(
+        go.Scattermap(
+            lat=[figure_samples["Lat"].iloc[0]],
+            lon=[figure_samples["Lng"].iloc[0]],
+            mode="markers",
+            marker={"size": 14, "color": "#22c55e"},
+            name="Start",
+            hovertemplate="Start<extra></extra>",
+        )
+    )
+    figure.add_trace(
+        go.Scattermap(
+            lat=[figure_samples["Lat"].iloc[-1]],
+            lon=[figure_samples["Lng"].iloc[-1]],
+            mode="markers",
+            marker={"size": 14, "color": "#ef4444"},
+            name="Finish",
+            hovertemplate="Finish<extra></extra>",
+        )
+    )
+    figure.update_layout(
+        title=title,
+        height=420,
+        margin={"l": 0, "r": 0, "t": 44, "b": 0},
+        map={
+            "style": "open-street-map",
+            "center": {
+                "lat": float(figure_samples["Lat"].mean()),
+                "lon": float(figure_samples["Lng"].mean()),
+            },
+            "zoom": _map_zoom(figure_samples),
+        },
+        legend={
+            "orientation": "h",
+            "x": 0.0,
+            "xanchor": "left",
+            "y": -0.08,
+            "yanchor": "top",
+        },
+    )
+    return figure
+
+
+def build_comparison_map_figure(
+    samples_a: pd.DataFrame,
+    samples_b: pd.DataFrame,
+    label_a: str,
+    label_b: str,
+) -> go.Figure:
+    figure_a = _sample_for_plotting(samples_a)
+    figure_b = _sample_for_plotting(samples_b)
+    combined = pd.concat([figure_a[["Lat", "Lng"]], figure_b[["Lat", "Lng"]]], ignore_index=True)
+
+    figure = go.Figure()
+    figure.add_trace(
+        go.Scattermap(
+            lat=figure_a["Lat"],
+            lon=figure_a["Lng"],
+            mode="lines",
+            line={"color": "#14b8a6", "width": 4},
+            name=label_a,
+            hovertemplate=f"{label_a}<br>Lat: %{{lat:.6f}}<br>Lng: %{{lon:.6f}}<extra></extra>",
+        )
+    )
+    figure.add_trace(
+        go.Scattermap(
+            lat=figure_b["Lat"],
+            lon=figure_b["Lng"],
+            mode="lines",
+            line={"color": "#f97316", "width": 4},
+            name=label_b,
+            hovertemplate=f"{label_b}<br>Lat: %{{lat:.6f}}<br>Lng: %{{lon:.6f}}<extra></extra>",
+        )
+    )
+    figure.update_layout(
+        title="Flight path comparison map",
+        height=460,
+        margin={"l": 0, "r": 0, "t": 44, "b": 0},
+        map={
+            "style": "open-street-map",
+            "center": {
+                "lat": float(combined["Lat"].mean()),
+                "lon": float(combined["Lng"].mean()),
+            },
+            "zoom": _map_zoom(combined),
+        },
+        legend={
+            "orientation": "h",
+            "x": 0.0,
+            "xanchor": "left",
+            "y": -0.08,
+            "yanchor": "top",
+        },
+    )
+    return figure
