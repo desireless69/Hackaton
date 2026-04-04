@@ -9,6 +9,10 @@ def _sample_for_plotting(samples: pd.DataFrame) -> pd.DataFrame:
     return samples.iloc[::step].copy()
 
 
+def _center_lat_lon(samples: pd.DataFrame) -> tuple[float, float]:
+    return float(samples["Lat"].mean()), float(samples["Lng"].mean())
+
+
 def build_trajectory_figure(samples: pd.DataFrame) -> go.Figure:
     figure_samples = _sample_for_plotting(samples)
     color_column = "TimeSec"
@@ -198,3 +202,110 @@ def build_projection_figures(samples: pd.DataFrame) -> tuple[go.Figure, go.Figur
     )
 
     return top_view, altitude_profile
+
+
+def build_map_figure(samples: pd.DataFrame) -> go.Figure:
+    figure_samples = _sample_for_plotting(samples)
+    center_lat, center_lon = _center_lat_lon(figure_samples)
+
+    figure = go.Figure(
+        data=[
+            go.Scattermap(
+                lat=figure_samples["Lat"],
+                lon=figure_samples["Lng"],
+                mode="lines+markers",
+                line={"width": 4, "color": "#0f766e"},
+                marker={
+                    "size": 8,
+                    "color": figure_samples["TimeSec"],
+                    "colorscale": "Turbo",
+                    "showscale": True,
+                    "colorbar": {"title": "Time (s)", "x": 1.02, "xanchor": "left"},
+                },
+                customdata=figure_samples[["Alt", "Spd", "TimeSec"]].to_numpy(),
+                hovertemplate=(
+                    "Time: %{customdata[2]:.2f} s<br>"
+                    "Lat: %{lat:.6f}<br>"
+                    "Lon: %{lon:.6f}<br>"
+                    "Altitude: %{customdata[0]:.2f} m<br>"
+                    "GPS speed: %{customdata[1]:.2f} m/s<extra></extra>"
+                ),
+                name="GPS route",
+            )
+        ]
+    )
+    figure.update_layout(
+        title="Map view",
+        height=520,
+        margin={"l": 0, "r": 0, "t": 48, "b": 0},
+        map={
+            "style": "open-street-map",
+            "center": {"lat": center_lat, "lon": center_lon},
+            "zoom": 15,
+        },
+        paper_bgcolor="#ffffff",
+        font={"color": "#0f172a"},
+    )
+    return figure
+
+
+def build_comparison_map_figure(
+    samples_a: pd.DataFrame,
+    samples_b: pd.DataFrame,
+    label_a: str,
+    label_b: str,
+) -> go.Figure:
+    figure_a = _sample_for_plotting(samples_a)
+    figure_b = _sample_for_plotting(samples_b)
+    combined = pd.concat([figure_a[["Lat", "Lng"]], figure_b[["Lat", "Lng"]]], ignore_index=True)
+    center_lat, center_lon = _center_lat_lon(combined)
+
+    figure = go.Figure()
+    figure.add_trace(
+        go.Scattermap(
+            lat=figure_a["Lat"],
+            lon=figure_a["Lng"],
+            mode="lines+markers",
+            line={"width": 4, "color": "#0f766e"},
+            marker={"size": 7, "color": "#14b8a6"},
+            customdata=figure_a[["Alt", "Spd", "TimeSec"]].to_numpy(),
+            hovertemplate=(
+                f"{label_a}<br>"
+                "Time: %{customdata[2]:.2f} s<br>"
+                "Altitude: %{customdata[0]:.2f} m<br>"
+                "GPS speed: %{customdata[1]:.2f} m/s<extra></extra>"
+            ),
+            name=label_a,
+        )
+    )
+    figure.add_trace(
+        go.Scattermap(
+            lat=figure_b["Lat"],
+            lon=figure_b["Lng"],
+            mode="lines+markers",
+            line={"width": 4, "color": "#f97316"},
+            marker={"size": 7, "color": "#fb923c"},
+            customdata=figure_b[["Alt", "Spd", "TimeSec"]].to_numpy(),
+            hovertemplate=(
+                f"{label_b}<br>"
+                "Time: %{customdata[2]:.2f} s<br>"
+                "Altitude: %{customdata[0]:.2f} m<br>"
+                "GPS speed: %{customdata[1]:.2f} m/s<extra></extra>"
+            ),
+            name=label_b,
+        )
+    )
+    figure.update_layout(
+        title="Route comparison map",
+        height=560,
+        margin={"l": 0, "r": 0, "t": 48, "b": 0},
+        map={
+            "style": "open-street-map",
+            "center": {"lat": center_lat, "lon": center_lon},
+            "zoom": 14,
+        },
+        paper_bgcolor="#ffffff",
+        font={"color": "#0f172a"},
+        legend={"orientation": "h", "x": 0, "y": 1.02, "xanchor": "left", "yanchor": "bottom"},
+    )
+    return figure

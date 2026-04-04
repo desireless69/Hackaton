@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Flight Comparison{% endblock %}
+{% block body_page %}comparison{% endblock %}
+
+{% block body %}
+<div class="page-shell">
+    <div class="ambient ambient-a"></div>
+    <div class="ambient ambient-b"></div>
+
+    <main class="app-shell">
+        <section class="topbar">
+            <div>
+                <div class="eyebrow">Flight comparison</div>
+                <h1>{{ label_a }} vs {{ label_b }}</h1>
+            </div>
+            <div class="topbar-actions">
+                <a href="/" class="secondary-button">Back To Upload</a>
+                <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle theme"></button>
+            </div>
+        </section>
+
+        <section class="report-grid">
+            <article class="panel panel-summary">
+                <div class="panel-heading">
+                    <div>
+                        <div class="panel-kicker">Quick read</div>
+                        <h2>Comparison summary</h2>
+                    </div>
+                </div>
+                <div class="summary-stack">
+                    <p>{{ summary }}</p>
+                    <div class="ai-section">
+                        <h3>{{ label_a }}</h3>
+                        <p>{{ filename_a }}</p>
+                    </div>
+                    <div class="ai-section">
+                        <h3>{{ label_b }}</h3>
+                        <p>{{ filename_b }}</p>
+                    </div>
+                </div>
+            </article>
+
+            <aside class="panel panel-side">
+                <div class="panel-heading">
+                    <div>
+                        <div class="panel-kicker">Overlay</div>
+                        <h2>Route map</h2>
+                    </div>
+                </div>
+                <div class="plot-frame">{{ map_html | safe }}</div>
+            </aside>
+        </section>
+
+        <section class="panel chart-panel">
+            <div class="panel-heading">
+                <div>
+                    <div class="panel-kicker">Metrics</div>
+                    <h2>Side-by-side comparison</h2>
+                </div>
+            </div>
+
+            <div class="comparison-table">
+                <div class="comparison-row comparison-row-head">
+                    <div>Metric</div>
+                    <div>{{ label_a }}</div>
+                    <div>{{ label_b }}</div>
+                    <div>Delta</div>
+                </div>
+                {% for row in rows %}
+                <div class="comparison-row">
+                    <div>
+                        <strong>{{ row.label }}</strong>
+                        <div class="meta-label">{{ row.winner }} leads</div>
+                    </div>
+                    <div>{{ "%.1f"|format(row.value_a) }} {{ row.unit }}</div>
+                    <div>{{ "%.1f"|format(row.value_b) }} {{ row.unit }}</div>
+                    <div>{{ "%+.1f"|format(row.delta) }} {{ row.unit }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', path='/js/plot-theme.js') }}"></script>
+{% endblock %}

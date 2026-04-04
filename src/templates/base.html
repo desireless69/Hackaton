@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light" data-ui-preset="mission-control" data-density="comfortable">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}UAV Telemetry Analyzer{% endblock %}</title>
+    <script>
+        (function () {
+            const theme = localStorage.getItem("telemetry-theme");
+            const preset = localStorage.getItem("telemetry-ui-preset");
+            const density = localStorage.getItem("telemetry-density");
+
+            if (theme) document.documentElement.setAttribute("data-theme", theme);
+            if (preset) document.documentElement.setAttribute("data-ui-preset", preset);
+            if (density) document.documentElement.setAttribute("data-density", density);
+        })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/favicon.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/app.css') }}">
+</head>
+<body data-page="{% block body_page %}default{% endblock %}">
+    {% block body %}{% endblock %}
+    <script src="{{ url_for('static', path='/js/app.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
