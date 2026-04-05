@@ -9,6 +9,10 @@ def _sample_for_plotting(samples: pd.DataFrame) -> pd.DataFrame:
     return samples.iloc[::step].copy()
 
 
+def _center_lat_lon(samples: pd.DataFrame) -> tuple[float, float]:
+    return float(samples["Lat"].mean()), float(samples["Lng"].mean())
+
+
 def build_trajectory_figure(samples: pd.DataFrame) -> go.Figure:
     figure_samples = _sample_for_plotting(samples)
     color_column = "TimeSec"
