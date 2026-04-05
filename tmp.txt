@@ -1,0 +1,8 @@
+from pathlib import Path
+
+# --- 0. ПІДГОТОВКА ВІДНОСНОГО ШЛЯХУ ---
+
+current_dir = Path(".")
+
+
+log_file = current_dir / "bin" / "00000001.BIN" # Заміни на шлях до свого файлу

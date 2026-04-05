@@ -1,22 +1,18 @@
+from fastapi import FastAPI, UploadFile, File, HTTPException
 import pandas as pd
 import numpy as np
 import math
 import plotly.express as px
 from pymavlink import mavutil
-import plotly.io as pio
-from pathlib import Path
+import tempfile
+import os
+import json
 
-# --- 0. ПІДГОТОВКА ВІДНОСНОГО ШЛЯХУ ---
+app = FastAPI(title="UAV Telemetry Analyzer API")
 
-current_dir = Path(".")
-
-# --- 1. ПАРСИНГ ТЕЛЕМЕТРІЇ (Data Parsing) ---
+# --- 1. ПАРСИНГ ТЕЛЕМЕТРІЇ ---
 def parse_bin_log(file_path):
-    """
-    Читає .BIN файл та витягує повідомлення GPS та IMU у pandas DataFrame.
-    """
     mlog = mavutil.mavlink_connection(file_path)
-    
     gps_data = []
     imu_data = []
     
@@ -27,160 +23,137 @@ def parse_bin_log(file_path):
             
         msg_dict = msg.to_dict()
         
-        if msg.get_type() == 'GPS' and msg_dict['Status'] >= 3: # Беремо лише 3D Fix
+        if msg.get_type() == 'GPS' and msg_dict['Status'] >= 3:
             gps_data.append({
                 'TimeUS': msg_dict['TimeUS'],
-                'Lat': msg_dict['Lat'] / 1e7,  # Конвертація у градуси
+                'Lat': msg_dict['Lat'] / 1e7,
                 'Lng': msg_dict['Lng'] / 1e7,
-                'Alt': msg_dict['Alt']         # Висота (метри)
+                'Alt': msg_dict['Alt']
             })
             
         elif msg.get_type() == 'IMU':
             imu_data.append({
                 'TimeUS': msg_dict['TimeUS'],
-                'AccX': msg_dict['AccX'],      # Прискорення (м/с^2)
+                'AccX': msg_dict['AccX'],
                 'AccY': msg_dict['AccY'],
                 'AccZ': msg_dict['AccZ']
             })
 
-    # Створюємо DataFrame
-    df_gps = pd.DataFrame(gps_data)
-    df_imu = pd.DataFrame(imu_data)
+    if not gps_data or not imu_data:
+        raise ValueError("У файлі відсутні дані GPS або IMU.")
+
+    df_gps = pd.DataFrame(gps_data).sort_values('TimeUS')
+    df_imu = pd.DataFrame(imu_data).sort_values('TimeUS')
     
-    # Оскільки датчики мають різну частоту семплювання, об'єднуємо їх за найближчим часом
-    df_gps = df_gps.sort_values('TimeUS')
-    df_imu = df_imu.sort_values('TimeUS')
     df_merged = pd.merge_asof(df_imu, df_gps, on='TimeUS', direction='nearest')
-    
-    # Видаляємо рядки без GPS (до фіксації супутників)
     df_merged = df_merged.dropna(subset=['Lat', 'Lng', 'Alt']).reset_index(drop=True)
     
-    # Переводимо час з мікросекунд у секунди від початку логу
     t0 = df_merged['TimeUS'].iloc[0]
     df_merged['TimeSec'] = (df_merged['TimeUS'] - t0) / 1e6
     
     return df_merged
 
-# --- 2. ЯДРО АНАЛІТИКИ: Математика та інтегрування ---
+# --- 2. ЯДРО АНАЛІТИКИ ---
 def haversine(lat1, lon1, lat2, lon2):
-    """
-    Обчислює відстань між двома точками на сфері (Землі) за їхніми координатами.
-    """
-    R = 6371000  # Радіус Землі в метрах
+    R = 6371000
     phi1, phi2 = math.radians(lat1), math.radians(lat2)
     delta_phi = math.radians(lat2 - lat1)
     delta_lambda = math.radians(lon2 - lon1)
 
-    a = math.sin(delta_phi / 2.0)**2 + \
-        math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0)**2
+    a = math.sin(delta_phi / 2.0)**2 + math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2.0)**2
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
     return R * c
 
 def calculate_metrics(df):
-    """
-    Обчислення підсумкових показників місії.
-    """
-    # 1. Загальна пройдена дистанція (Haversine)
-    total_distance = 0.0
-    for i in range(1, len(df)):
-        total_distance += haversine(df['Lat'].iloc[i-1], df['Lng'].iloc[i-1], 
-                                    df['Lat'].iloc[i], df['Lng'].iloc[i])
+    total_distance = sum(
+        haversine(df['Lat'].iloc[i-1], df['Lng'].iloc[i-1], df['Lat'].iloc[i], df['Lng'].iloc[i])
+        for i in range(1, len(df))
+    )
         
-    # 2. Швидкість через метод трапецій (інтегрування прискорення)
-    # Зверни увагу: сире інтегрування IMU дасть значний дрейф (похибку), 
-    # це варто описати в теоретичному обґрунтуванні!
     df['dt'] = df['TimeSec'].diff().fillna(0)
-    
-    # Проєкція горизонтального прискорення (спрощено)
     df['AccHoriz'] = np.sqrt(df['AccX']**2 + df['AccY']**2)
     
-    # v(t) = v(t-1) + 0.5 * (a(t) + a(t-1)) * dt
     velocities = [0.0]
     for i in range(1, len(df)):
-        v_prev = velocities[-1]
-        a_curr = df['AccHoriz'].iloc[i]
-        a_prev = df['AccHoriz'].iloc[i-1]
-        dt = df['dt'].iloc[i]
-        
-        v_curr = v_prev + 0.5 * (a_curr + a_prev) * dt
+        v_curr = velocities[-1] + 0.5 * (df['AccHoriz'].iloc[i] + df['AccHoriz'].iloc[i-1]) * df['dt'].iloc[i]
         velocities.append(v_curr)
         
     df['VelHoriz_IMU'] = velocities
     
-    max_accel = df[['AccX', 'AccY', 'AccZ']].abs().max().max()
-    max_alt_gain = df['Alt'].max() - df['Alt'].min()
-    total_time = df['TimeSec'].iloc[-1]
+    # Збираємо метрики у словник замість print
+    metrics = {
+        "total_time_sec": round(df['TimeSec'].iloc[-1], 2),
+        "max_accel_m_s2": round(df[['AccX', 'AccY', 'AccZ']].abs().max().max(), 2),
+        "max_alt_gain_m": round(df['Alt'].max() - df['Alt'].min(), 2),
+        "total_distance_m": round(total_distance, 2)
+    }
     
-    print("--- Підсумкові метрики польоту ---")
-    print(f"Тривалість польоту: {total_time:.2f} с")
-    print(f"Максимальне прискорення: {max_accel:.2f} м/с^2")
-    print(f"Максимальний набір висоти: {max_alt_gain:.2f} м")
-    print(f"Пройдена дистанція (Haversine): {total_distance:.2f} м")
-    
-    return df
+    return df, metrics
 
 # --- 3. КОНВЕРТАЦІЯ WGS-84 -> ENU ---
 def wgs84_to_enu(df):
-    """
-    Переводить глобальні координати у локальну декартову систему (метри від старту).
-    Використовується наближення плоскої Землі (достатньо для локальних польотів БПЛА).
-    """
-    lat0 = math.radians(df['Lat'].iloc[0])
-    lon0 = math.radians(df['Lng'].iloc[0])
+    lat0, lon0 = math.radians(df['Lat'].iloc[0]), math.radians(df['Lng'].iloc[0])
     alt0 = df['Alt'].iloc[0]
-    R = 6378137.0 # Екваторіальний радіус Землі
+    R = 6378137.0 
     
-    x_enu, y_enu, z_enu = [], [], []
+    # Векторизована версія для швидкості
+    lat_rad = np.radians(df['Lat'])
+    lon_rad = np.radians(df['Lng'])
     
-    for _, row in df.iterrows():
-        lat = math.radians(row['Lat'])
-        lon = math.radians(row['Lng'])
-        
-        d_lon = lon - lon0
-        d_lat = lat - lat0
-        
-        x = d_lon * R * math.cos(lat0) # Схід (East)
-        y = d_lat * R                  # Північ (North)
-        z = row['Alt'] - alt0          # Вгору (Up)
-        
-        x_enu.append(x)
-        y_enu.append(y)
-        z_enu.append(z)
-        
-    df['X_ENU'] = x_enu
-    df['Y_ENU'] = y_enu
-    df['Z_ENU'] = z_enu
+    df['X_ENU'] = (lon_rad - lon0) * R * math.cos(lat0)
+    df['Y_ENU'] = (lat_rad - lat0) * R
+    df['Z_ENU'] = df['Alt'] - alt0
     
     return df
 
-# --- 4. 3D-ВІЗУАЛІЗАЦІЯ ---
-def plot_trajectory(df):
-    """
-    Будує інтерактивний 3D-графік просторової траєкторії.
-    """
-    pio.renderers.default = "browser" # Або "vscode" чи "browser"
+# --- 4. 3D-ВІЗУАЛІЗАЦІЯ (Експорт) ---
+def get_trajectory_plot_json(df):
     df_filtered = df.iloc[::20, :].copy()
-    fig = px.line_3d(df_filtered, x='X_ENU', y='Y_ENU', z='Z_ENU', 
-                     color='TimeSec', # Динамічне колорування за плином часу
-                     title='3D Траєкторія польоту (ENU координати)',
-                     labels={'X_ENU': 'Схід (м)', 'Y_ENU': 'Північ (м)', 'Z_ENU': 'Висота (м)', 'TimeSec': 'Час (с)'})
-    
+    fig = px.line_3d(
+        df_filtered, x='X_ENU', y='Y_ENU', z='Z_ENU', 
+        color='TimeSec', 
+        title='3D Траєкторія польоту (ENU координати)',
+        labels={'X_ENU': 'Схід (м)', 'Y_ENU': 'Північ (м)', 'Z_ENU': 'Висота (м)', 'TimeSec': 'Час (с)'}
+    )
     fig.update_traces(line=dict(width=5))
-    fig.update_layout(scene=dict(aspectmode='data')) # Зберігає реальні пропорції осей
-    fig.show()
+    fig.update_layout(scene=dict(aspectmode='data'))
+    
+    # Повертаємо серіалізований JSON графіка
+    return fig.to_json()
 
-# --- ГОЛОВНИЙ БЛОК ---
-if __name__ == "__main__":
-    log_file = current_dir / "bin" / "00000001.BIN" # Заміни на шлях до свого файлу
+# --- FASTAPI ЕНДПОЇНТИ ---
+@app.post("/analyze-log/")
+async def analyze_log_endpoint(file: UploadFile = File(...)):
+    if not file.filename.upper().endswith('.BIN'):
+        raise HTTPException(status_code=400, detail="Файл має бути формату .BIN")
+
+    # Створюємо тимчасовий файл, бо pymavlink потрібен шлях до файлу
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".BIN") as temp_file:
+        content = await file.read()
+        temp_file.write(content)
+        temp_file_path = temp_file.name
+
+    try:
+        # Пайплайн обробки
+        flight_data = parse_bin_log(temp_file_path)
+        flight_data, metrics = calculate_metrics(flight_data)
+        flight_data = wgs84_to_enu(flight_data)
+        plot_json = get_trajectory_plot_json(flight_data)
+
+        return {
+            "filename": file.filename,
+            "metrics": metrics,
+            "plot_data": json.loads(plot_json) # Передаємо Plotly дані як JSON об'єкт
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
-    print("Парсинг логу...")
-    flight_data = parse_bin_log(log_file)
-    
-    print("Обчислення метрик та інтегрування...")
-    flight_data = calculate_metrics(flight_data)
-    
-    print("Конвертація систем координат...")
-    flight_data = wgs84_to_enu(flight_data)
-    
-    print("Побудова 3D моделі...")
-    plot_trajectory(flight_data)
+    finally:
+        # Прибираємо за собою
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+
+@app.get("/")
+def read_root():
+    return {"message": "UAV Telemetry API працює. Надішли .BIN файл на POST /analyze-log/"}                                     
