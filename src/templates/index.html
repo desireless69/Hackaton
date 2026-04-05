@@ -1,5 +1,6 @@
-﻿{% extends "base.html" %}
-{% block title %}Telemetry Workspace{% endblock %}
+{% extends "base.html" %}
+
+{% block title %}UAV Telemetry Analyzer{% endblock %}
 {% block body_page %}upload{% endblock %}
 
 {% block body %}
@@ -8,48 +9,43 @@
     <div class="ambient ambient-b"></div>
 
     <main class="app-shell">
-        <section class="topbar">
+        <header class="topbar">
             <div>
-                <div class="eyebrow">Telemetry Workspace</div>
+                <p class="eyebrow">Telemetry Workspace</p>
                 <h1 class="hero-title">Upload a flight log and keep your UI presets ready for frontend work.</h1>
             </div>
             <div class="topbar-actions">
-                <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle theme"></button>
+                <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle theme" title="Toggle theme"></button>
             </div>
-        </section>
+        </header>
 
         <section class="hero-grid">
             <article class="panel panel-hero">
-                <div class="panel-heading">
-                    <div>
-                        <div class="panel-kicker">FastAPI + Plotly</div>
-                        <h2>Frontend starter shell</h2>
-                    </div>
-                </div>
-
+                <p class="panel-kicker">FastAPI + Plotly</p>
+                <h2>Frontend starter shell</h2>
                 <p class="panel-copy">
                     This template separates layout, styling, and behavior so you can continue with components,
                     API wiring, and polished interactions without reworking the backend pages.
                 </p>
 
                 <div class="feature-list">
-                    <span class="feature-chip">Saved theme</span>
-                    <span class="feature-chip">Saved density</span>
-                    <span class="feature-chip">Reusable layout</span>
-                    <span class="feature-chip">Frontend-ready JS hooks</span>
+                    <div class="feature-chip">Saved theme</div>
+                    <div class="feature-chip">Saved density</div>
+                    <div class="feature-chip">Reusable layout</div>
+                    <div class="feature-chip">Frontend-ready JS hooks</div>
                 </div>
 
-                <form action="/analyze" method="post" enctype="multipart/form-data" class="upload-form">
+                <form class="upload-form" action="/analyze" method="post" enctype="multipart/form-data">
                     <label class="dropzone" for="flight-log-input">
-                        <span class="dropzone-title">Drop <code>.BIN</code> or <code>.log</code> here</span>
+                        <input id="flight-log-input" type="file" name="file" accept=".bin,.log" required>
+                        <span class="dropzone-title">Drop `.BIN` or `.log` here</span>
                         <span class="dropzone-copy">or click to choose a telemetry file from your machine</span>
                         <span class="dropzone-meta" data-file-name>No file selected</span>
-                        <input id="flight-log-input" type="file" name="file" accept=".bin,.log" required>
                     </label>
 
                     <div class="form-actions">
-                        <button type="submit" class="primary-button" data-submit-label>Analyze Flight</button>
-                        <span class="form-hint">The selected UI preset is saved locally and reused on the report page.</span>
+                        <button class="primary-button" type="submit" data-submit-label="Analyze Flight">Analyze Flight</button>
+                        <p class="form-hint">The selected UI preset is saved locally and reused on the report page.</p>
                     </div>
                 </form>
             </article>
@@ -57,7 +53,7 @@
             <aside class="panel panel-presets">
                 <div class="panel-heading">
                     <div>
-                        <div class="panel-kicker">Saved presets</div>
+                        <p class="panel-kicker">Saved Presets</p>
                         <h2>Choose a UI mode</h2>
                     </div>
                     <button type="button" class="text-button" data-reset-prefs>Reset</button>
@@ -78,53 +74,57 @@
                     </button>
                 </div>
 
-                <div class="density-switcher">
+                <div class="density-switcher" role="group" aria-label="Density switcher">
                     <button type="button" class="density-button" data-density-option="comfortable">Comfortable</button>
                     <button type="button" class="density-button" data-density-option="compact">Compact</button>
                 </div>
 
                 <div class="preset-preview">
-                    <div class="preview-label">Current preset</div>
-                    <h3 data-current-preset-label>Mission Control</h3>
+                    <p class="preview-label">Current preset</p>
+                    <strong data-current-preset-label>Mission Control</strong>
                     <p data-current-preset-copy>Balanced default for metrics, summaries, and charts.</p>
                 </div>
             </aside>
         </section>
 
-        <section class="panel panel-summary">
+        <section class="panel panel-compare">
             <div class="panel-heading">
                 <div>
-                    <div class="panel-kicker">Comparison</div>
+                    <p class="panel-kicker">Comparison</p>
                     <h2>Compare two flight logs</h2>
                 </div>
             </div>
+            <p class="panel-copy">Upload two flights to compare their route, core metrics, and relative performance in one report.</p>
 
-            <p class="panel-copy">
-                Upload two flights to compare their route, core metrics, and relative performance in one report.
-            </p>
-
-            <form action="/compare" method="post" enctype="multipart/form-data" class="compare-form">
+            <form class="compare-form" action="/compare" method="post" enctype="multipart/form-data">
                 <div class="compare-grid">
-                    <label class="field">
-                        <span class="field-label">Flight A label</span>
-                        <input type="text" name="label_a" value="Reference flight">
-                    </label>
-                    <label class="field">
-                        <span class="field-label">Flight B label</span>
-                        <input type="text" name="label_b" value="Candidate flight">
-                    </label>
-                    <label class="field">
-                        <span class="field-label">Flight A file</span>
-                        <input type="file" name="file_a" accept=".bin,.log" required>
-                    </label>
-                    <label class="field">
-                        <span class="field-label">Flight B file</span>
-                        <input type="file" name="file_b" accept=".bin,.log" required>
-                    </label>
+                    <div class="file-field">
+                        <label class="field-label" for="compare-label-a">Flight A label</label>
+                        <input id="compare-label-a" type="text" name="compare_label_a" placeholder="Reference flight">
+                    </div>
+                    <div class="file-field">
+                        <label class="field-label" for="compare-label-b">Flight B label</label>
+                        <input id="compare-label-b" type="text" name="compare_label_b" placeholder="Candidate flight">
+                    </div>
+                    <div class="file-field">
+                        <label class="field-label" for="compare-file-a">Flight A file</label>
+                        <label class="file-picker" for="compare-file-a">
+                            <input id="compare-file-a" class="file-picker-input" type="file" name="file_a" accept=".bin,.log" required data-file-display="compare-file-name-a">
+                            <span class="file-picker-button">Choose file</span>
+                            <span class="file-picker-name" id="compare-file-name-a">No file selected</span>
+                        </label>
+                    </div>
+                    <div class="file-field">
+                        <label class="field-label" for="compare-file-b">Flight B file</label>
+                        <label class="file-picker" for="compare-file-b">
+                            <input id="compare-file-b" class="file-picker-input" type="file" name="file_b" accept=".bin,.log" required data-file-display="compare-file-name-b">
+                            <span class="file-picker-button">Choose file</span>
+                            <span class="file-picker-name" id="compare-file-name-b">No file selected</span>
+                        </label>
+                    </div>
                 </div>
-
                 <div class="form-actions">
-                    <button type="submit" class="secondary-button">Compare Flights</button>
+                    <button class="secondary-button" type="submit">Compare Flights</button>
                 </div>
             </form>
         </section>

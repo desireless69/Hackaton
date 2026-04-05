@@ -204,47 +204,75 @@ def build_projection_figures(samples: pd.DataFrame) -> tuple[go.Figure, go.Figur
     return top_view, altitude_profile
 
 
-def build_map_figure(samples: pd.DataFrame) -> go.Figure:
-    figure_samples = _sample_for_plotting(samples)
-    center_lat, center_lon = _center_lat_lon(figure_samples)
+def _map_zoom(samples: pd.DataFrame) -> float:
+    lat_span = float(samples["Lat"].max() - samples["Lat"].min())
+    lon_span = float(samples["Lng"].max() - samples["Lng"].min())
+    span = max(lat_span, lon_span)
 
-    figure = go.Figure(
-        data=[
-            go.Scattermap(
-                lat=figure_samples["Lat"],
-                lon=figure_samples["Lng"],
-                mode="lines+markers",
-                line={"width": 4, "color": "#0f766e"},
-                marker={
-                    "size": 8,
-                    "color": figure_samples["TimeSec"],
-                    "colorscale": "Turbo",
-                    "showscale": True,
-                    "colorbar": {"title": "Time (s)", "x": 1.02, "xanchor": "left"},
-                },
-                customdata=figure_samples[["Alt", "Spd", "TimeSec"]].to_numpy(),
-                hovertemplate=(
-                    "Time: %{customdata[2]:.2f} s<br>"
-                    "Lat: %{lat:.6f}<br>"
-                    "Lon: %{lon:.6f}<br>"
-                    "Altitude: %{customdata[0]:.2f} m<br>"
-                    "GPS speed: %{customdata[1]:.2f} m/s<extra></extra>"
-                ),
-                name="GPS route",
-            )
-        ]
+    if span < 0.002:
+        return 15.5
+    if span < 0.005:
+        return 14.5
+    if span < 0.02:
+        return 13.0
+    if span < 0.08:
+        return 11.5
+    return 10.0
+
+
+def build_map_figure(samples: pd.DataFrame, title: str = "Flight path map") -> go.Figure:
+    figure_samples = _sample_for_plotting(samples)
+
+    figure = go.Figure()
+    figure.add_trace(
+        go.Scattermap(
+            lat=figure_samples["Lat"],
+            lon=figure_samples["Lng"],
+            mode="lines",
+            line={"color": "#14b8a6", "width": 4},
+            name="Track",
+            hovertemplate="Lat: %{lat:.6f}<br>Lng: %{lon:.6f}<extra></extra>",
+        )
+    )
+    figure.add_trace(
+        go.Scattermap(
+            lat=[figure_samples["Lat"].iloc[0]],
+            lon=[figure_samples["Lng"].iloc[0]],
+            mode="markers",
+            marker={"size": 14, "color": "#22c55e"},
+            name="Start",
+            hovertemplate="Start<extra></extra>",
+        )
+    )
+    figure.add_trace(
+        go.Scattermap(
+            lat=[figure_samples["Lat"].iloc[-1]],
+            lon=[figure_samples["Lng"].iloc[-1]],
+            mode="markers",
+            marker={"size": 14, "color": "#ef4444"},
+            name="Finish",
+            hovertemplate="Finish<extra></extra>",
+        )
     )
     figure.update_layout(
-        title="Map view",
-        height=520,
-        margin={"l": 0, "r": 0, "t": 48, "b": 0},
+        title=title,
+        height=420,
+        margin={"l": 0, "r": 0, "t": 44, "b": 0},
         map={
             "style": "open-street-map",
-            "center": {"lat": center_lat, "lon": center_lon},
-            "zoom": 15,
+            "center": {
+                "lat": float(figure_samples["Lat"].mean()),
+                "lon": float(figure_samples["Lng"].mean()),
+            },
+            "zoom": _map_zoom(figure_samples),
         },
-        paper_bgcolor="#ffffff",
-        font={"color": "#0f172a"},
+        legend={
+            "orientation": "h",
+            "x": 0.0,
+            "xanchor": "left",
+            "y": -0.08,
+            "yanchor": "top",
+        },
     )
     return figure
 
@@ -258,54 +286,46 @@ def build_comparison_map_figure(
     figure_a = _sample_for_plotting(samples_a)
     figure_b = _sample_for_plotting(samples_b)
     combined = pd.concat([figure_a[["Lat", "Lng"]], figure_b[["Lat", "Lng"]]], ignore_index=True)
-    center_lat, center_lon = _center_lat_lon(combined)
 
     figure = go.Figure()
     figure.add_trace(
         go.Scattermap(
             lat=figure_a["Lat"],
             lon=figure_a["Lng"],
-            mode="lines+markers",
-            line={"width": 4, "color": "#0f766e"},
-            marker={"size": 7, "color": "#14b8a6"},
-            customdata=figure_a[["Alt", "Spd", "TimeSec"]].to_numpy(),
-            hovertemplate=(
-                f"{label_a}<br>"
-                "Time: %{customdata[2]:.2f} s<br>"
-                "Altitude: %{customdata[0]:.2f} m<br>"
-                "GPS speed: %{customdata[1]:.2f} m/s<extra></extra>"
-            ),
+            mode="lines",
+            line={"color": "#14b8a6", "width": 4},
             name=label_a,
+            hovertemplate=f"{label_a}<br>Lat: %{{lat:.6f}}<br>Lng: %{{lon:.6f}}<extra></extra>",
         )
     )
     figure.add_trace(
         go.Scattermap(
             lat=figure_b["Lat"],
             lon=figure_b["Lng"],
-            mode="lines+markers",
-            line={"width": 4, "color": "#f97316"},
-            marker={"size": 7, "color": "#fb923c"},
-            customdata=figure_b[["Alt", "Spd", "TimeSec"]].to_numpy(),
-            hovertemplate=(
-                f"{label_b}<br>"
-                "Time: %{customdata[2]:.2f} s<br>"
-                "Altitude: %{customdata[0]:.2f} m<br>"
-                "GPS speed: %{customdata[1]:.2f} m/s<extra></extra>"
-            ),
+            mode="lines",
+            line={"color": "#f97316", "width": 4},
             name=label_b,
+            hovertemplate=f"{label_b}<br>Lat: %{{lat:.6f}}<br>Lng: %{{lon:.6f}}<extra></extra>",
         )
     )
     figure.update_layout(
-        title="Route comparison map",
-        height=560,
-        margin={"l": 0, "r": 0, "t": 48, "b": 0},
+        title="Flight path comparison map",
+        height=460,
+        margin={"l": 0, "r": 0, "t": 44, "b": 0},
         map={
             "style": "open-street-map",
-            "center": {"lat": center_lat, "lon": center_lon},
-            "zoom": 14,
+            "center": {
+                "lat": float(combined["Lat"].mean()),
+                "lon": float(combined["Lng"].mean()),
+            },
+            "zoom": _map_zoom(combined),
         },
-        paper_bgcolor="#ffffff",
-        font={"color": "#0f172a"},
-        legend={"orientation": "h", "x": 0, "y": 1.02, "xanchor": "left", "yanchor": "bottom"},
+        legend={
+            "orientation": "h",
+            "x": 0.0,
+            "xanchor": "left",
+            "y": -0.08,
+            "yanchor": "top",
+        },
     )
     return figure

@@ -6,13 +6,21 @@
     <title>{% block title %}UAV Telemetry Analyzer{% endblock %}</title>
     <script>
         (function () {
-            const theme = localStorage.getItem("telemetry-theme");
-            const preset = localStorage.getItem("telemetry-ui-preset");
-            const density = localStorage.getItem("telemetry-density");
+            const storedTheme = localStorage.getItem("telemetry-theme");
+            const storedPreset = localStorage.getItem("telemetry-ui-preset");
+            const storedDensity = localStorage.getItem("telemetry-density");
 
-            if (theme) document.documentElement.setAttribute("data-theme", theme);
-            if (preset) document.documentElement.setAttribute("data-ui-preset", preset);
-            if (density) document.documentElement.setAttribute("data-density", density);
+            if (storedTheme) {
+                document.documentElement.setAttribute("data-theme", storedTheme);
+            }
+
+            if (storedPreset) {
+                document.documentElement.setAttribute("data-ui-preset", storedPreset);
+            }
+
+            if (storedDensity) {
+                document.documentElement.setAttribute("data-density", storedDensity);
+            }
         })();
     </script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -20,6 +28,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', path='/favicon.svg') }}">
     <link rel="stylesheet" href="{{ url_for('static', path='/css/app.css') }}">
+    {% block head_extra %}{% endblock %}
 </head>
 <body data-page="{% block body_page %}default{% endblock %}">
     {% block body %}{% endblock %}

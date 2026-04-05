@@ -1,26 +1,41 @@
-function plotTheme(theme) {
-    const dark = theme === "dark";
-    const axisColor = dark ? "#cbd5e1" : "#334155";
-    const gridColor = dark ? "rgba(148, 163, 184, 0.18)" : "rgba(71, 85, 105, 0.38)";
-    const zeroColor = dark ? "rgba(148, 163, 184, 0.24)" : "rgba(51, 65, 85, 0.48)";
-    const lineColor = dark ? "#cbd5e1" : "#334155";
-    const paper = dark ? "#0f172a" : "#ffffff";
-    const plot = dark ? "#111c31" : "#eef4fb";
-    const sceneBackground = dark ? "rgba(15, 23, 42, 0.92)" : "rgba(226, 232, 240, 0.92)";
-
+function getPlotTheme(theme) {
+    const isDark = theme === "dark";
     return {
-        paper_bgcolor: paper,
-        plot_bgcolor: plot,
-        font: { color: dark ? "#e2e8f0" : "#0f172a" },
-        legend: { font: { color: dark ? "#e2e8f0" : "#0f172a" } },
-        title: { font: { color: dark ? "#e2e8f0" : "#0f172a" } },
-        xaxis: { color: axisColor, gridcolor: gridColor, zerolinecolor: zeroColor, linecolor: lineColor },
-        yaxis: { color: axisColor, gridcolor: gridColor, zerolinecolor: zeroColor, linecolor: lineColor },
+        paper_bgcolor: isDark ? "#0a1421" : "#ffffff",
+        plot_bgcolor: isDark ? "#0f1b2b" : "#eef5fb",
+        font: { color: isDark ? "#edf6ff" : "#112033" },
+        legend: { font: { color: isDark ? "#edf6ff" : "#112033" } },
+        title: { font: { color: isDark ? "#edf6ff" : "#112033" } },
+        xaxis: {
+            color: isDark ? "#c7d2e0" : "#405165",
+            gridcolor: isDark ? "rgba(148, 163, 184, 0.18)" : "rgba(64, 81, 101, 0.16)",
+            zerolinecolor: isDark ? "rgba(148, 163, 184, 0.24)" : "rgba(64, 81, 101, 0.22)",
+        },
+        yaxis: {
+            color: isDark ? "#c7d2e0" : "#405165",
+            gridcolor: isDark ? "rgba(148, 163, 184, 0.18)" : "rgba(64, 81, 101, 0.16)",
+            zerolinecolor: isDark ? "rgba(148, 163, 184, 0.24)" : "rgba(64, 81, 101, 0.22)",
+        },
         scene: {
-            xaxis: { color: axisColor, gridcolor: gridColor, zerolinecolor: zeroColor, linecolor: lineColor, backgroundcolor: sceneBackground },
-            yaxis: { color: axisColor, gridcolor: gridColor, zerolinecolor: zeroColor, linecolor: lineColor, backgroundcolor: sceneBackground },
-            zaxis: { color: axisColor, gridcolor: gridColor, zerolinecolor: zeroColor, linecolor: lineColor, backgroundcolor: sceneBackground },
-            bgcolor: dark ? "#0f172a" : "#ffffff",
+            bgcolor: isDark ? "#0a1421" : "#ffffff",
+            xaxis: {
+                color: isDark ? "#c7d2e0" : "#405165",
+                backgroundcolor: isDark ? "#0f1b2b" : "#eef5fb",
+                gridcolor: isDark ? "rgba(148, 163, 184, 0.18)" : "rgba(64, 81, 101, 0.16)",
+                zerolinecolor: isDark ? "rgba(148, 163, 184, 0.24)" : "rgba(64, 81, 101, 0.22)",
+            },
+            yaxis: {
+                color: isDark ? "#c7d2e0" : "#405165",
+                backgroundcolor: isDark ? "#0f1b2b" : "#eef5fb",
+                gridcolor: isDark ? "rgba(148, 163, 184, 0.18)" : "rgba(64, 81, 101, 0.16)",
+                zerolinecolor: isDark ? "rgba(148, 163, 184, 0.24)" : "rgba(64, 81, 101, 0.22)",
+            },
+            zaxis: {
+                color: isDark ? "#c7d2e0" : "#405165",
+                backgroundcolor: isDark ? "#0f1b2b" : "#eef5fb",
+                gridcolor: isDark ? "rgba(148, 163, 184, 0.18)" : "rgba(64, 81, 101, 0.16)",
+                zerolinecolor: isDark ? "rgba(148, 163, 184, 0.24)" : "rgba(64, 81, 101, 0.22)",
+            },
         },
     };
 }
@@ -30,8 +45,9 @@ function restylePlots(theme) {
         window.setTimeout(() => restylePlots(theme), 120);
         return;
     }
+
     document.querySelectorAll(".js-plotly-plot").forEach((plot) => {
-        window.Plotly.relayout(plot, plotTheme(theme));
+        window.Plotly.relayout(plot, getPlotTheme(theme));
     });
 }
 

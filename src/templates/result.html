@@ -1,4 +1,5 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
+
 {% block title %}Flight Report: {{ filename }}{% endblock %}
 {% block body_page %}report{% endblock %}
 
@@ -8,32 +9,29 @@
     <div class="ambient ambient-b"></div>
 
     <main class="app-shell">
-        <section class="topbar">
+        <header class="topbar">
             <div>
-                <div class="eyebrow">Telemetry report</div>
-                <h1>Flight Report: {{ filename }}</h1>
+                <p class="eyebrow">Flight Report</p>
+                <h1 class="hero-title">{{ filename }}</h1>
             </div>
             <div class="topbar-actions">
-                {% if export_url %}
-                <a href="{{ export_url }}" class="primary-button">Export PDF</a>
-                {% endif %}
+                <a href="/report/{{ report_id }}/export/pdf" class="secondary-button">Export PDF</a>
                 <a href="/" class="secondary-button">Upload Another</a>
-                <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle theme"></button>
+                <button type="button" class="icon-button" data-theme-toggle aria-label="Toggle theme" title="Toggle theme"></button>
             </div>
-        </section>
+        </header>
 
         <section class="report-grid">
             <article class="panel panel-summary">
                 <div class="panel-heading">
                     <div>
-                        <div class="panel-kicker">AI generated conclusion</div>
-                        <h2>Flight summary</h2>
+                        <p class="panel-kicker">AI Conclusion</p>
+                        <h2>Flight insights</h2>
                     </div>
-                    <span class="status-pill">Preset-aware UI</span>
+                    <span class="status-pill">Gemini assisted</span>
                 </div>
-
+                <p class="panel-copy">This summary is generated from parsed telemetry metrics and anomaly checks.</p>
                 <div class="summary-stack">
-                    <p>This section is generated from the parsed telemetry metrics and anomaly checks, while keeping the reusable frontend shell intact.</p>
                     {{ summary_html | safe }}
                 </div>
             </article>
@@ -41,54 +39,52 @@
             <aside class="panel panel-side">
                 <div class="panel-heading">
                     <div>
-                        <div class="panel-kicker">Session data</div>
-                        <h2>Report context</h2>
+                        <p class="panel-kicker">Session Meta</p>
+                        <h2>Capture info</h2>
                     </div>
                 </div>
-
                 <div class="meta-grid">
                     <div class="meta-card">
-                        <div class="meta-label">GPS frequency</div>
+                        <span class="meta-label">GPS frequency</span>
                         <strong>{{ gps_frequency_hz }} Hz</strong>
                     </div>
                     <div class="meta-card">
-                        <div class="meta-label">IMU frequency</div>
+                        <span class="meta-label">IMU frequency</span>
                         <strong>{{ imu_frequency_hz }} Hz</strong>
                     </div>
                 </div>
-
-                <div class="preset-preview">
-                    <div class="preview-label">Current preset</div>
-                    <h3 data-current-preset-label>Mission Control</h3>
-                    <p data-current-preset-copy>Balanced default for metrics, summaries, and charts.</p>
+                <div class="preset-preview compact">
+                    <p class="preview-label">Saved preset</p>
+                    <strong data-current-preset-label>Mission Control</strong>
+                    <p data-current-preset-copy></p>
                 </div>
             </aside>
         </section>
 
         <section class="metrics-grid">
             <article class="metric-card">
-                <div class="metric-label">Total duration</div>
-                <div class="metric-value">{{ "%.1f"|format(metrics.total_duration_s) }} s</div>
+                <span class="metric-label">Total Duration</span>
+                <strong class="metric-value">{{ "%.1f"|format(metrics.total_duration_s) }} s</strong>
             </article>
             <article class="metric-card">
-                <div class="metric-label">Total distance</div>
-                <div class="metric-value">{{ "%.1f"|format(metrics.total_distance_m) }} m</div>
+                <span class="metric-label">Total Distance</span>
+                <strong class="metric-value">{{ "%.1f"|format(metrics.total_distance_m) }} m</strong>
             </article>
             <article class="metric-card">
-                <div class="metric-label">Max altitude gain</div>
-                <div class="metric-value">{{ "%.1f"|format(metrics.max_altitude_gain_m) }} m</div>
+                <span class="metric-label">Max Alt Gain</span>
+                <strong class="metric-value">{{ "%.1f"|format(metrics.max_altitude_gain_m) }} m</strong>
             </article>
             <article class="metric-card">
-                <div class="metric-label">Max horizontal speed</div>
-                <div class="metric-value">{{ "%.1f"|format(metrics.max_horizontal_speed_m_s) }} m/s</div>
+                <span class="metric-label">Max Speed (Horiz)</span>
+                <strong class="metric-value">{{ "%.1f"|format(metrics.max_horizontal_speed_m_s) }} m/s</strong>
             </article>
             <article class="metric-card">
-                <div class="metric-label">Max vertical speed</div>
-                <div class="metric-value">{{ "%.1f"|format(metrics.max_vertical_speed_m_s) }} m/s</div>
+                <span class="metric-label">Max Speed (Vertical)</span>
+                <strong class="metric-value">{{ "%.1f"|format(metrics.max_vertical_speed_m_s) }} m/s</strong>
             </article>
             <article class="metric-card">
-                <div class="metric-label">Max acceleration</div>
-                <div class="metric-value">{{ "%.1f"|format(metrics.max_acceleration_m_s2) }} m/s²</div>
+                <span class="metric-label">Max Acceleration</span>
+                <strong class="metric-value">{{ "%.1f"|format(metrics.max_acceleration_m_s2) }} m/s²</strong>
             </article>
         </section>
 
@@ -96,42 +92,50 @@
             <article class="panel chart-panel">
                 <div class="panel-heading">
                     <div>
-                        <div class="panel-kicker">GPS route</div>
-                        <h2>Map view</h2>
+                        <p class="panel-kicker">Map View</p>
+                        <h2>GPS route</h2>
                     </div>
                 </div>
-                <div class="plot-frame">{{ map_html | safe }}</div>
+                <div class="plot-frame">
+                    {{ map_html | safe }}
+                </div>
             </article>
 
             <article class="panel chart-panel">
                 <div class="panel-heading">
                     <div>
-                        <div class="panel-kicker">3D route</div>
+                        <p class="panel-kicker">3D Track</p>
                         <h2>Trajectory</h2>
                     </div>
                 </div>
-                <div class="plot-frame">{{ trajectory_html | safe }}</div>
+                <div class="plot-frame">
+                    {{ trajectory_html | safe }}
+                </div>
             </article>
 
             <div class="chart-row">
                 <article class="panel chart-panel">
                     <div class="panel-heading">
                         <div>
-                            <div class="panel-kicker">Top down</div>
-                            <h2>Horizontal projection</h2>
+                            <p class="panel-kicker">Projection</p>
+                            <h2>Top view</h2>
                         </div>
                     </div>
-                    <div class="plot-frame">{{ top_view_html | safe }}</div>
+                    <div class="plot-frame">
+                        {{ top_view_html | safe }}
+                    </div>
                 </article>
 
                 <article class="panel chart-panel">
                     <div class="panel-heading">
                         <div>
-                            <div class="panel-kicker">Altitude trace</div>
-                            <h2>Height over time</h2>
+                            <p class="panel-kicker">Projection</p>
+                            <h2>Altitude profile</h2>
                         </div>
                     </div>
-                    <div class="plot-frame">{{ altitude_html | safe }}</div>
+                    <div class="plot-frame">
+                        {{ altitude_html | safe }}
+                    </div>
                 </article>
             </div>
         </section>
