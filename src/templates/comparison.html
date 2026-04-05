@@ -65,10 +65,11 @@
                     <tbody>
                         {% for row in comparison_rows %}
                         <tr>
+                            {% set trend = "up" if row.delta > 0 else "down" if row.delta < 0 else "flat" %}
                             <td>{{ row.label }}</td>
-                            <td>{{ "%.2f"|format(row.first) }}</td>
-                            <td>{{ "%.2f"|format(row.second) }}</td>
-                            <td class="delta-{{ row.trend }}">{{ row.delta_text }}</td>
+                            <td>{{ "%.2f"|format(row.value_a) }} {{ row.unit }}</td>
+                            <td>{{ "%.2f"|format(row.value_b) }} {{ row.unit }}</td>
+                            <td class="delta-{{ trend }}">{{ "%+.2f"|format(row.delta) }} {{ row.unit }}</td>
                         </tr>
                         {% endfor %}
                     </tbody>

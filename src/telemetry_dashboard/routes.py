@@ -94,15 +94,17 @@ async def compare_telemetry(
         parsed_b = parse_bin_log(tmp_b_path)
         report_a = analyze_flight(parsed_a)
         report_b = analyze_flight(parsed_b)
+        context_a = build_report_context(file_a.filename, None, parsed_a, report_a).to_dict()
+        context_b = build_report_context(file_b.filename, None, parsed_b, report_b).to_dict()
         context = {
             "request": request,
             "label_a": label_a_clean,
             "label_b": label_b_clean,
-            "filename_a": file_a.filename,
-            "filename_b": file_b.filename,
+            "context_a": context_a,
+            "context_b": context_b,
             "summary": render_comparison_summary(label_a_clean, label_b_clean, report_a, report_b),
-            "rows": [row.to_dict() for row in build_comparison_rows(label_a_clean, label_b_clean, report_a, report_b)],
-            "map_html": build_comparison_map_html(report_a, report_b, label_a_clean, label_b_clean),
+            "comparison_rows": [row.to_dict() for row in build_comparison_rows(label_a_clean, label_b_clean, report_a, report_b)],
+            "comparison_map_html": build_comparison_map_html(report_a, report_b, label_a_clean, label_b_clean),
         }
         return templates.TemplateResponse(request=request, name="comparison.html", context=context)
     except Exception as exc:
