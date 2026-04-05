@@ -16,11 +16,12 @@ This project is an ArduPilot telemetry analyzer that:
 ```text
 .
 |-- main.py
-|-- run_analysis.py
 |-- requirements.txt
 |-- Dockerfile
 |-- docker-compose.yaml
 |-- src/telemetry_dashboard
+|-- src/static
+|-- src/templates
 |-- bin
 `-- README.md
 ```
@@ -41,12 +42,6 @@ Create a local `.env` file:
 ```bash
 GEMINI_API_KEY=your_gemini_api_key
 GEMINI_MODEL=gemini-1.5-flash
-```
-
-## Console validation
-
-```bash
-python run_analysis.py
 ```
 
 ## Docker run
